@@ -48,6 +48,23 @@ jobs:
       - name: install packages
         run: sudo apt-get install libnfnetlink-dev
 
+      - name: probe startup at 881037d, then with the fix
+        run: |
+          set +e
+          cd minissdpd
+          make minissdpd >/dev/null 2>&1
+          echo "--- base 881037d"
+          timeout 5 ./minissdpd -d -i lo -s /tmp/minissdpd.sock -p /tmp/minissdpd.pid; echo "exit=$?"
+          git fetch --quiet --depth 1 origin fix-minissdpd-fd-setsize-else
+          git checkout FETCH_HEAD -- minissdpd.c
+          git diff --cached --stat
+          make minissdpd >/dev/null 2>&1
+          echo "--- with fix"
+          timeout 5 ./minissdpd -d -i lo -s /tmp/minissdpd.sock -p /tmp/minissdpd.pid; echo "exit=$?"
+          git checkout HEAD -- minissdpd.c
+          make clean >/dev/null 2>&1
+          true
+
       - name: build minissdpd
         run: make -C minissdpd all check
 
